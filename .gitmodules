@@ -1,0 +1,3 @@
+[submodule "instreply-worker"]
+	path = instreply-worker
+	url = https://github.com/ProdanCristian/instreply-worker.git
