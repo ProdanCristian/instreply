@@ -22,6 +22,34 @@
       "when": 1740832742870,
       "tag": "0002_fixed_omega_sentinel",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1741007257152,
+      "tag": "0003_keen_barracuda",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1741008072864,
+      "tag": "0004_spooky_power_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1741094124560,
+      "tag": "0005_typical_clint_barton",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1741194750577,
+      "tag": "0006_cute_jean_grey",
+      "breakpoints": true
     }
   ]
 }

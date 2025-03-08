@@ -2,6 +2,7 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 export function UserProfile() {
     const { data: session } = useSession();
@@ -11,10 +12,12 @@ export function UserProfile() {
     return (
         <div className="flex items-center gap-3">
             {session.user.image && (
-                <img
+                <Image
                     src={session.user.image}
                     alt={session.user.name || "User"}
                     className="h-8 w-8 rounded-full"
+                    width={32}
+                    height={32}
                 />
             )}
             <div className="hidden md:block">

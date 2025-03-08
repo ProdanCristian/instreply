@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { hash } from "bcrypt";
-import db from "@/lib/db";
-import { users, accounts } from "@/lib/schema";
+import { db } from "@/lib/db";
+import { users, verificationTokens } from "@/lib/schema";
 import { eq } from "drizzle-orm";
+import { randomBytes } from "crypto";
 
 export async function POST(req: Request) {
   try {
@@ -29,10 +30,24 @@ export async function POST(req: Request) {
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: "User with this email already exists" },
-        { status: 409 }
-      );
+      // Check which provider they used and return appropriate message
+      if (existingUser.authProvider === "google") {
+        return NextResponse.json(
+          {
+            error:
+              "This email is already registered with Google. Please sign in with Google.",
+          },
+          { status: 409 }
+        );
+      } else {
+        return NextResponse.json(
+          {
+            error:
+              "This email is already registered. Please sign in with your password.",
+          },
+          { status: 409 }
+        );
+      }
     }
 
     // Hash password
@@ -45,25 +60,37 @@ export async function POST(req: Request) {
         name,
         email,
         password: hashedPassword,
+        authProvider: "credentials",
       })
       .returning({
         id: users.id,
         name: users.name,
         email: users.email,
-        createdAt: users.createdAt,
-        updatedAt: users.updatedAt,
       });
 
-    // Create account entry for credentials provider
-    await db.insert(accounts).values({
-      userId: newUser.id,
-      type: "credentials",
-      provider: "credentials",
-      providerAccountId: email, // Using email as the provider account ID
+    // Create verification token
+    const token = randomBytes(32).toString("hex");
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    await db.insert(verificationTokens).values({
+      identifier: email,
+      token,
+      expires,
     });
 
+    // TODO: Send verification email
+    // You'll need to implement email sending logic here
+    // For now, we'll just return the token in the response
+    // In production, you should send this via email
+
     return NextResponse.json(
-      { user: newUser, message: "User registered successfully" },
+      {
+        user: newUser,
+        message:
+          "User registered successfully. Please check your email to verify your account.",
+        redirect: "/dashboard",
+        verificationToken: token, // Remove this in production
+      },
       { status: 201 }
     );
   } catch (error) {

@@ -7,8 +7,6 @@ import {
   json,
   varchar,
   primaryKey,
-  integer,
-  unique,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -19,43 +17,12 @@ export const users = pgTable("users", {
   password: text("password"),
   emailVerified: timestamp("email_verified", { mode: "date" }),
   image: text("image"),
+  authProvider: varchar("auth_provider", { length: 20 }).notNull(), // 'credentials' or 'google'
+  emailNotificationsEnabled: boolean("email_notifications_enabled")
+    .default(true)
+    .notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
-});
-
-export const accounts = pgTable(
-  "accounts",
-  {
-    id: serial("id").primaryKey(),
-    userId: serial("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    type: text("type").notNull(),
-    provider: text("provider").notNull(),
-    providerAccountId: text("provider_account_id").notNull(),
-    refreshToken: text("refresh_token"),
-    accessToken: text("access_token"),
-    expiresAt: integer("expires_at"),
-    tokenType: text("token_type"),
-    scope: text("scope"),
-    idToken: text("id_token"),
-    sessionState: text("session_state"),
-  },
-  (account) => ({
-    providerAccountIdx: unique().on(
-      account.provider,
-      account.providerAccountId
-    ),
-  })
-);
-
-export const sessions = pgTable("sessions", {
-  id: serial("id").primaryKey(),
-  sessionToken: text("session_token").notNull().unique(),
-  userId: serial("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  expires: timestamp("expires", { mode: "date" }).notNull(),
 });
 
 export const verificationTokens = pgTable(
@@ -107,25 +74,25 @@ export const comments = pgTable("comments", {
   isAiGenerated: boolean("is_ai_generated").default(false).notNull(),
 });
 
+// Add this new table for social connections
+export const socialConnections = pgTable("social_connections", {
+  id: serial("id").primaryKey(),
+  userId: serial("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  platform: varchar("platform", { length: 20 }).notNull(), // 'INSTAGRAM', 'FACEBOOK', etc.
+  accessToken: text("access_token").notNull(),
+  platformUserId: text("platform_user_id").notNull(),
+  platformUserName: text("platform_user_name"),
+  platformUserAvatar: text("platform_user_avatar"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
-  accounts: many(accounts),
-  sessions: many(sessions),
   automations: many(automations),
-}));
-
-export const accountsRelations = relations(accounts, ({ one }) => ({
-  user: one(users, {
-    fields: [accounts.userId],
-    references: [users.id],
-  }),
-}));
-
-export const sessionsRelations = relations(sessions, ({ one }) => ({
-  user: one(users, {
-    fields: [sessions.userId],
-    references: [users.id],
-  }),
+  socialConnections: many(socialConnections),
 }));
 
 export const automationsRelations = relations(automations, ({ one, many }) => ({

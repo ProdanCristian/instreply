@@ -1,12 +1,12 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import GoogleProvider from "next-auth/providers/google";
 import { compare } from "bcrypt";
-import db from "./db";
+import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { users } from "./schema";
+import { getServerSession } from "next-auth";
 
-// Extend the session type to include user id
 declare module "next-auth" {
   interface Session {
     user: {
@@ -14,20 +14,38 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       image?: string | null;
+      emailVerified?: Date | null;
     };
+  }
+
+  interface User {
+    emailVerified?: Date | null;
   }
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: DrizzleAdapter(db),
   secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60,
   },
   pages: {
     signIn: "/login",
+    error: "/login",
+    verifyRequest: "/verify-email",
   },
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code",
+        },
+      },
+    }),
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -36,65 +54,107 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          console.log("Missing credentials");
-          return null;
+          throw new Error("Email and password required");
         }
 
-        try {
-          const user = await db.query.users.findFirst({
-            where: eq(users.email, credentials.email),
-          });
+        const user = await db.query.users.findFirst({
+          where: eq(users.email, credentials.email),
+        });
 
-          if (!user) {
-            console.log("User not found:", credentials.email);
-            return null;
-          }
+        if (!user) {
+          throw new Error("No user found with this email");
+        }
 
-          console.log("Found user:", user.email);
-          console.log("Stored password hash:", user.password);
-          console.log("Comparing with:", credentials.password);
-
-          const isPasswordValid = await compare(
-            credentials.password,
-            user.password
+        if (user.authProvider === "google") {
+          throw new Error(
+            "This email is registered with Google. Please sign in with Google."
           );
-
-          console.log("Password valid:", isPasswordValid);
-
-          if (!isPasswordValid) {
-            console.log("Password validation failed");
-            return null;
-          }
-
-          console.log("Authentication successful");
-          return {
-            id: user.id.toString(),
-            email: user.email,
-            name: user.name || null,
-            image: user.image || null,
-          };
-        } catch (error) {
-          console.error("Auth error:", error);
-          return null;
         }
+
+        if (!user.password) {
+          throw new Error("Invalid login method");
+        }
+
+        const isPasswordValid = await compare(
+          credentials.password,
+          user.password
+        );
+
+        if (!isPasswordValid) {
+          throw new Error("Invalid password");
+        }
+
+        return {
+          id: String(user.id),
+          email: user.email,
+          name: user.name || "",
+          emailVerified: user.emailVerified,
+        };
       },
     }),
   ],
   callbacks: {
+    async signIn({ user, account }) {
+      if (account?.provider === "google") {
+        try {
+          const existingUser = await db.query.users.findFirst({
+            where: eq(users.email, user.email!),
+          });
+
+          if (!existingUser) {
+            const [newUser] = await db
+              .insert(users)
+              .values({
+                name: user.name,
+                email: user.email!,
+                image: user.image,
+                emailVerified: new Date(),
+                authProvider: "google",
+              })
+              .returning();
+
+            user.id = String(newUser.id);
+          } else {
+            user.id = String(existingUser.id);
+          }
+        } catch (error) {
+          console.error("Error during Google sign in:", error);
+          return false;
+        }
+      }
+      return true;
+    },
     async session({ session, token }) {
-      if (token && session.user) {
-        session.user.id = token.id as string;
-        session.user.name = token.name as string | null;
-        session.user.email = token.email as string | null;
+      if (session.user) {
+        session.user.id = token.sub!;
+        session.user.name = token.name as string;
+        session.user.email = token.email as string;
         session.user.image = token.picture as string | null;
+        session.user.emailVerified = token.emailVerified as Date | null;
       }
       return session;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
-        token.id = user.id;
+        token.sub = user.id;
+        token.name = user.name;
+        token.email = user.email;
+        token.picture = user.image;
+        token.emailVerified = user.emailVerified;
       }
+
+      if (trigger === "update" && session) {
+        token.name = session.user.name;
+        token.email = session.user.email;
+        token.picture = session.user.image;
+        token.emailVerified = session.user.emailVerified;
+      }
+
       return token;
     },
   },
 };
+
+export async function getSession() {
+  return await getServerSession(authOptions);
+}

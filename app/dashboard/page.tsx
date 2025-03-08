@@ -44,36 +44,6 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Message Templates</CardTitle>
-                        <CardDescription>Create and manage message templates</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-sm text-gray-500">0 templates</p>
-                    </CardContent>
-                    <CardFooter>
-                        <Link href="/dashboard/templates/messages">
-                            <Button variant="outline">View Templates</Button>
-                        </Link>
-                    </CardFooter>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Comment Templates</CardTitle>
-                        <CardDescription>Create and manage comment templates</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-sm text-gray-500">0 templates</p>
-                    </CardContent>
-                    <CardFooter>
-                        <Link href="/dashboard/templates/comments">
-                            <Button variant="outline">View Templates</Button>
-                        </Link>
-                    </CardFooter>
-                </Card>
-
-                <Card>
-                    <CardHeader>
                         <CardTitle>AI Assistant</CardTitle>
                         <CardDescription>Configure AI to generate responses</CardDescription>
                     </CardHeader>

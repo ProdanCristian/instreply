@@ -3,8 +3,6 @@ import postgres from "postgres";
 import * as schema from "./schema";
 
 // For use in a Node.js environment (API routes, server components, etc.)
-const connectionString = process.env.DATABASE_URL || "";
+const connectionString = process.env.DATABASE_URL!;
 const client = postgres(connectionString);
-const db = drizzle(client, { schema });
-
-export default db;
+export const db = drizzle(client, { schema });

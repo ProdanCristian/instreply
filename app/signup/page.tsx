@@ -2,6 +2,8 @@ import { SignupForm } from "@/components/signup-form";
 import { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
+import { Suspense } from "react";
+
 export const metadata: Metadata = {
     title: "Sign Up - InstaReply",
     description: "Create your InstaReply account",
@@ -16,7 +18,9 @@ export default function SignupPage() {
                     <span className="text-xl font-bold">InstReply</span>
                 </div>
             </Link>
-            <SignupForm />
+            <Suspense fallback={<div>Loading...</div>}>
+                <SignupForm />
+            </Suspense>
         </div>
     );
 } 

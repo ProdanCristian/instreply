@@ -2,6 +2,8 @@ import { LoginForm } from "@/components/login-form";
 import { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
+
 export const metadata: Metadata = {
   title: "Login - InstaReply",
   description: "Login to your InstaReply account",
@@ -16,7 +18,9 @@ export default function LoginPage() {
           <span className="text-xl font-bold">InstReply</span>
         </div>
       </Link>
-      <LoginForm className="w-full max-w-[800px]" />
+      <Suspense fallback={<div>Loading...</div>}>
+        <LoginForm className="w-full max-w-[800px]" />
+      </Suspense>
     </div>
   );
 }
